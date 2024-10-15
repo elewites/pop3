@@ -12,6 +12,6 @@
 
 #include <stdio.h>
 
-void        run_server(const char *port, void (*handler)(void *));
+void run_server(const char *port, void (*handler)(void *));
 
 #endif
