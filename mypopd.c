@@ -13,7 +13,9 @@
 
 typedef enum state {
     Undefined,
-    // TODO: Add additional states as necessary
+    Authorization,
+    Transaction,
+    Update
 } State;
 
 typedef struct serverstate {
@@ -28,6 +30,8 @@ typedef struct serverstate {
 } serverstate;
 
 static void handle_client(void *new_fd);
+// Function to handle incoming commands
+int handle_command(serverstate *ss, const char *command);
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -67,7 +71,7 @@ int do_quit(serverstate *ss) {
     // Note: This method has been filled in intentionally!
     dlog("Executing quit\n");
     send_formatted(ss->fd, "+OK Service closing transmission channel\r\n");
-    ss->state = Undefined;
+    ss->state = Update;
     return -1;
 }
 
@@ -127,7 +131,7 @@ void handle_client(void *new_fd) {
 
     ss->fd = fd;
     ss->nb = nb_create(fd, MAX_LINE_LENGTH);
-    ss->state = Undefined;
+    ss->state = Authorization;
     uname(&ss->my_uname);
     // TODO: Initialize additional fields in `serverstate`, if any
     if (send_formatted(fd, "+OK POP3 Server on %s ready\r\n", ss->my_uname.nodename) <= 0) return;
@@ -157,9 +161,60 @@ void handle_client(void *new_fd) {
 
         /* TODO: Handle the different values of `command` and dispatch it to the correct implementation
          *  TOP, UIDL, APOP commands do not need to be implemented and therefore may return an error response */
+        if (handle_command(ss, command) == -1) {
+            break;
+        };
     }
     // TODO: Clean up fields in `serverstate`, if required
     nb_destroy(ss->nb);
     close(fd);
     free(new_fd);
 }
+
+int handle_command(serverstate *ss, const char *command) {
+    // USER command can be handled in Authorization state
+    if (strcmp(command, "USER") == 0) {
+        if (checkstate(ss, Authorization)) {
+            // do_user(ss);
+        } else {
+            //
+        }
+    }
+    // QUIT command can be handled in any state
+    else if (strcmp(command, "QUIT") == 0) {
+        return do_quit(ss);
+    }
+    // PASS command can be handled in Authorization state
+    else if (strcmp(command, "PASS") == 0) {
+        if (checkstate(ss, Authorization)) {
+            // do_pass(ss);
+        }
+    }
+    // STAT command can be handled in Transaction state
+    else if (strcmp(command, "STAT") == 0) {
+        if (checkstate(ss, Transaction)) {
+            // Handle STAT command
+        }
+    }
+    // LIST command can be handled in Transaction state
+    else if (strcmp(command, "LIST") == 0) {
+        if (checkstate(ss, Transaction)) {
+            // Handle LIST command
+        }
+    }
+    // RETR command can be handled in Transaction state
+    else if (strcmp(command, "RETR") == 0) {
+        if (checkstate(ss, Transaction)) {
+            // Handle RETR command
+        }
+    }
+    // RSET command can be handled in Transaction state
+    else if (strcmp(command, "RSET") == 0) {
+        if (checkstate(ss, Transaction)) {
+            // Handle RSET command
+        }
+    }
+    // TODO Handle other commands...
+    return 1;
+}
+

@@ -47,7 +47,8 @@ void run_server(const char *port, void (*handler)(void *)) {
     // Possibly not necessary, but good practice
     signal(SIGINT, sigint_handler);
 
-    // Create a socket
+    // Create the main socket
+    // this will be the socket that listens for incoming connections
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
         perror("Error opening socket");
@@ -55,7 +56,7 @@ void run_server(const char *port, void (*handler)(void *)) {
     }
 
     //configure the sockaddr_in struct
-    server_addr.sin_family = AF_INET; // set to AF_INET to use IP
+    server_addr.sin_family = AF_INET; // set to AF_INET to use IPv4
     server_addr.sin_port = htons(atoi(port)); // convert port to network byte order
     server_addr.sin_addr.s_addr = INADDR_ANY; // listen on all interfaces
     memset(server_addr.sin_zero, '\0', sizeof(server_addr.sin_zero)); // zero the rest of the struct
