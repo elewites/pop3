@@ -43,7 +43,8 @@ void sigint_handler(int signum) {
 void run_server(const char *port, void (*handler)(void *)) {
     struct sockaddr_in server_addr;
     
-    // Set up signal handler to close the server
+    // Set up signal handler to close the server gracefully
+    // Possibly not necessary, but good practice
     signal(SIGINT, sigint_handler);
 
     // Create a socket
