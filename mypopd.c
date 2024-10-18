@@ -92,14 +92,13 @@ int do_user(serverstate *ss, const char *username) {
     // Ensure that the command is only allowed in the Authorization state
     if (ss->state != Authorization) {
         send_formatted(ss->fd, "-ERR Command USER only allowed in AUTHORIZATION state\r\n");
-        return 1;  // No need to check, returning 1 to indicate failure anyway
+        return 1; // Indicate failure
     }
     // Validate the username using the is_valid_user function
     if (is_valid_user(username, NULL)) {
         // Store the username in the server state (for later use in PASS command)
         strncpy(ss->current_user, username, sizeof(ss->current_user) - 1);
-        send_formatted(ss->fd, "+OK User accepted, proceed with PASS\r\n");
-        return 0;  // Indicate success
+        return send_formatted(ss->fd, "+OK User accepted, proceed with PASS\r\n") <= 0 ? 1 : 0;
     } else {
         // Respond with an error if the user is not found
         send_formatted(ss->fd, "-ERR user not found\r\n");
@@ -107,10 +106,27 @@ int do_user(serverstate *ss, const char *username) {
     }
 }
 
-int do_pass(serverstate *ss) {
-    dlog("Executing pass\n");
-    // TODO: Implement this function
-    return 0;
+// int do_pass(serverstate *ss) {
+//     dlog("Executing pass\n");
+//     // TODO: Implement this function
+//     return 0;
+// }
+int do_pass(serverstate *ss, const char *password) {
+    if (ss->state != Authorization) {
+        return send_formatted(ss->fd, "-ERR Command PASS only allowed in AUTHORIZATION state\r\n") <= 0 ? 1 : 1;
+    }
+    if (ss->current_user[0] == '\0') {  // Check if current_user is not set
+        return send_formatted(ss->fd, "-ERR No user set\r\n") <= 0 ? 1 : 1;
+    }
+    if (password == NULL) {
+        return send_formatted(ss->fd, "-ERR Missing password\r\n") <= 0 ? 1 : 1;
+    }
+    if (is_valid_user(ss->current_user, password)) {
+        ss->state = Transaction;
+        return send_formatted(ss->fd, "+OK User authenticated, proceed\r\n") <= 0 ? 1 : 0;
+    } else {
+        return send_formatted(ss->fd, "-ERR Invalid password\r\n") <= 0 ? 1 : 1;
+    }
 }
 
 int do_stat(serverstate *ss) {
@@ -239,9 +255,7 @@ int handle_command(serverstate *ss, const char *command) {
     }
     // PASS command can be handled in Authorization state
     else if (strcmp(command, "PASS") == 0) {
-        if (checkstate(ss, Authorization)) {
-            // do_pass(ss);
-        }
+        return do_pass(ss, ss->words[1] ? ss->words[1] : NULL);
     }
     // STAT command can be handled in Transaction state
     else if (strcmp(command, "STAT") == 0) {
