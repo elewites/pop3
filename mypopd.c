@@ -112,9 +112,11 @@ int do_rset(serverstate *ss) {
 }
 
 int do_noop(serverstate *ss) {
-    dlog("Executing noop\n");
-    // TODO: Implement this function
-    return 0;
+    dlog("Executing NOOP command\n");
+    if (send_formatted(ss->fd, "+OK NOOP acknowledged\r\n") <= 0) {
+        return 1;  // Return 1 to indicate that the command was unsuccessful
+    }
+    return 0;  // Return 0 to indicate that the command was successful
 }
 
 int do_dele(serverstate *ss) {
@@ -163,7 +165,9 @@ void handle_client(void *new_fd) {
          *  TOP, UIDL, APOP commands do not need to be implemented and therefore may return an error response */
         if (handle_command(ss, command) == -1) {
             break;
-        };
+        } else if (handle_command(ss, command) == 1) {
+            // send_formatted(fd, "-ERR Command not recognized\r\n");
+        }
     }
     // TODO: Clean up fields in `serverstate`, if required
     nb_destroy(ss->nb);
@@ -181,7 +185,7 @@ int handle_command(serverstate *ss, const char *command) {
         }
     }
     // QUIT command can be handled in any state
-    else if (strcmp(command, "QUIT") == 0) {
+    else if (strcasecmp(command, "QUIT") == 0) {
         return do_quit(ss);
     }
     // PASS command can be handled in Authorization state
@@ -214,7 +218,18 @@ int handle_command(serverstate *ss, const char *command) {
             // Handle RSET command
         }
     }
-    // TODO Handle other commands...
+    // NOOP command can be handled in Transaction state
+    else if (strcasecmp(command, "NOOP") == 0) {
+        int state = checkstate(ss, Transaction);
+        if (state == 0) {
+            return do_noop(ss);
+        } else if (state == 1) {
+            dlog("Server is not in the appropriate state for the NOOP command\n");
+            return 1;
+        } else {
+            return -1;
+        }
+    }
     return 1;
 }
 
