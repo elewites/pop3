@@ -113,7 +113,7 @@ int do_rset(serverstate *ss) {
 
 int do_noop(serverstate *ss) {
     dlog("Executing NOOP command\n");
-    if (send_formatted(ss->fd, "+OK NOOP acknowledged\r\n") <= 0) {
+    if (send_formatted(ss->fd, "+OK\r\n") <= 0) {
         return 1;  // Return 1 to indicate that the command was unsuccessful
     }
     return 0;  // Return 0 to indicate that the command was successful
@@ -163,10 +163,16 @@ void handle_client(void *new_fd) {
 
         /* TODO: Handle the different values of `command` and dispatch it to the correct implementation
          *  TOP, UIDL, APOP commands do not need to be implemented and therefore may return an error response */
-        if (handle_command(ss, command) == -1) {
+        int response = handle_command(ss, command);
+        if (response == -1) {
+            // Server should exit
             break;
-        } else if (handle_command(ss, command) == 1) {
+        } else if (response == 1) {
+            // Command was unsuccessful
             // send_formatted(fd, "-ERR Command not recognized\r\n");
+        } else {
+            // Command was successful
+            // send_formatted(fd, "+OK Command successful\r\n");
         }
     }
     // TODO: Clean up fields in `serverstate`, if required
