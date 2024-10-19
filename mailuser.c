@@ -187,6 +187,7 @@ mail_list_t load_user_mail(const char *username) {
   
     char filename[2 * NAME_MAX + 1];
     sprintf(filename, "%s/%s", MAIL_BASE_DIRECTORY, username);
+    dlog("Loading mail for user %s from %s\n", username, filename);
   
     DIR *dir = opendir(filename);
     if (!dir) return NULL;

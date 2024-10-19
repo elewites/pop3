@@ -169,14 +169,6 @@ int do_rset(serverstate *ss) {
     return 0;
 }
 
-// int do_noop(serverstate *ss) {
-//     dlog("Executing NOOP command\n");
-//     if (send_formatted(ss->fd, "+OK\r\n") <= 0) {
-//         return 1;  // Return 1 to indicate that the command was unsuccessful
-//     }
-//     return 0;  // Return 0 to indicate that the command was successful
-// }
-
 int do_noop(serverstate *ss) {
     dlog("Executing NOOP command\n");
     // Ensure that the command is only allowed in the TRANSACTION state
@@ -194,11 +186,33 @@ int do_noop(serverstate *ss) {
 }
 
 
-int do_dele(serverstate *ss) {
-    dlog("Executing dele\n");
-    // TODO: Implement this function
-    return 0;
+int do_dele(serverstate *ss){
+    dlog("Executing DELE command\n");
+    if(ss->state!=Transaction){
+        return send_formatted(ss->fd,"-ERR Command DELE only allowed in TRANSACTION state\r\n")<=0?1:1;
+    }
+    if(ss->nwords<2||!ss->words[1]){
+        return send_formatted(ss->fd,"-ERR No message number specified\r\n")<=0?1:1;
+    }
+    int msg_num=atoi(ss->words[1]);
+    if(msg_num<=0){
+        return send_formatted(ss->fd,"-ERR Invalid message number\r\n")<=0?1:1;
+    }
+    mail_list_t mail_list=load_user_mail(ss->current_user);
+    if(!mail_list){
+        return send_formatted(ss->fd,"-ERR Could not retrieve maildrop\r\n")<=0?1:1;
+    }
+    mail_item_t item = mail_list_retrieve(mail_list,msg_num-1);
+    if(item==NULL){
+        return send_formatted(ss->fd,"-ERR No such message\r\n")<=0?1:1;
+    }
+    // if(item->deleted){
+    //     return send_formatted(ss->fd,"-ERR Message %d already deleted\r\n",msg_num)<=0?1:1;
+    // }
+    mail_item_delete(item);
+    return send_formatted(ss->fd,"+OK Message %d deleted\r\n",msg_num)<=0?1:0;
 }
+
 
 void handle_client(void *new_fd) {
     int fd = *(int *)(new_fd);
@@ -298,7 +312,10 @@ int handle_command(serverstate *ss, const char *command) {
     // NOOP command can be handled in Transaction state
     else if (strcasecmp(command, "NOOP") == 0) {
         return do_noop(ss);
-    } else {
+    } else if (strcasecmp(command, "DELE") == 0) {
+        return do_dele(ss);
+    }
+    else {
         // Command not recognized
         send_formatted(ss->fd, "-ERR Command not recognized\r\n");
         return 1;
