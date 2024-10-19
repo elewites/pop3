@@ -129,11 +129,25 @@ int do_pass(serverstate *ss, const char *password) {
     }
 }
 
-int do_stat(serverstate *ss) {
-    dlog("Executing stat\n");
-    // TODO: Implement this function
-    return 0;
+// int do_stat(serverstate *ss) {
+//     dlog("Executing stat\n");
+//     // TODO: Implement this function
+//     return 0;
+// }
+
+int do_stat(serverstate *ss){
+    if(ss->state!=Transaction){
+        return send_formatted(ss->fd,"-ERR STAT command only allowed in TRANSACTION state\r\n")<=0?1:1;
+    }
+    mail_list_t mail_list=load_user_mail(ss->current_user);
+    if(!mail_list){
+        return send_formatted(ss->fd,"-ERR Could not retrieve maildrop\r\n")<=0?1:1;
+    }
+    int num_messages=mail_list_length(mail_list,0);
+    size_t total_size=mail_list_size(mail_list);
+    return send_formatted(ss->fd,"+OK %d %zu\r\n",num_messages,total_size)<=0?1:0;
 }
+
 
 int do_list(serverstate *ss) {
     dlog("Executing list\n");
