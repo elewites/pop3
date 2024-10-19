@@ -273,9 +273,7 @@ int handle_command(serverstate *ss, const char *command) {
     }
     // STAT command can be handled in Transaction state
     else if (strcmp(command, "STAT") == 0) {
-        if (checkstate(ss, Transaction)) {
-            // Handle STAT command
-        }
+        return do_stat(ss);
     }
     // LIST command can be handled in Transaction state
     else if (strcmp(command, "LIST") == 0) {
