@@ -141,9 +141,11 @@ int do_stat(serverstate *ss){
     }
     mail_list_t mail_list=load_user_mail(ss->current_user);
     if(!mail_list){
-        return send_formatted(ss->fd,"-ERR Could not retrieve maildrop\r\n")<=0?1:1;
+        // return send_formatted(ss->fd,"-ERR Could not retrieve maildrop\r\n")<=0?1:1;
+        return send_formatted(ss->fd,"+OK 0 0\r\n")<=0?1:0;  // Return +OK even if the maildrop is empty
+
     }
-    int num_messages=mail_list_length(mail_list,0);
+    int num_messages=mail_list_length(mail_list, 0);
     size_t total_size=mail_list_size(mail_list);
     return send_formatted(ss->fd,"+OK %d %zu\r\n",num_messages,total_size)<=0?1:0;
 }
